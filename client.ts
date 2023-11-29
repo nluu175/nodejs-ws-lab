@@ -8,31 +8,36 @@ interface ICoords {
     x: number;
     y: number;
     frame: number;
-  }
+  };
 }
 
 const DEBUG = false; // Render debug physics entities
 
 function uuid(
-  a?: any               // placeholder
+  a?: any // placeholder
 ): string {
-  return a              // if the placeholder was passed, return
-    ? (                 // a random number from 0 to 15
-      a ^               // unless b is 8,
-      Math.random()     // in which case
-      * 16              // a random number from
-      >> a / 4          // 8 to 11
-    ).toString(16)      // in hexadecimal
-    : (                 // or otherwise a concatenated string:
-      1e7.toString() +  // 10000000 +
-      -1e3 +            // -1000 +
-      -4e3 +            // -4000 +
-      -8e3 +            // -80000000 +
-      -1e11             // -100000000000,
-    ).replace(          // replacing
-      /[018]/g,         // zeroes, ones, and eights with
-      uuid              // random hex digits
-    )
+  return a // if the placeholder was passed, return
+    ? // a random number from 0 to 15
+      (
+        a ^ // unless b is 8,
+        ((Math.random() * // in which case
+          16) >> // a random number from
+          (a / 4))
+      ) // 8 to 11
+        .toString(16) // in hexadecimal
+    : // or otherwise a concatenated string:
+      (
+        (1e7).toString() + // 10000000 +
+        -1e3 + // -1000 +
+        -4e3 + // -4000 +
+        -8e3 + // -80000000 +
+        -1e11
+      ) // -100000000000,
+        .replace(
+          // replacing
+          /[018]/g, // zeroes, ones, and eights with
+          uuid // random hex digits
+        );
 }
 
 class GameScene extends Phaser.Scene {
@@ -47,9 +52,11 @@ class GameScene extends Phaser.Scene {
   private downKey?: Phaser.Input.Keyboard.Key;
 
   private id = uuid();
-  private players: {[key: string]: Phaser.GameObjects.Sprite} = {};
+  private players: { [key: string]: Phaser.GameObjects.Sprite } = {};
 
-  constructor() { super({ key: "GameScene" }); }
+  constructor() {
+    super({ key: "GameScene" });
+  }
 
   /**
    * Load the assets required by the scene
@@ -58,7 +65,8 @@ class GameScene extends Phaser.Scene {
     this.load.tilemapCSV("map", "static/level_map.csv");
     this.load.image("tiles", "static/tiles_16.png");
     this.load.spritesheet("player", "static/spaceman.png", {
-      frameWidth: 16, frameHeight: 16
+      frameWidth: 16,
+      frameHeight: 16,
     });
   }
 
@@ -95,7 +103,7 @@ class GameScene extends Phaser.Scene {
           this.players[playerId] = this.add.sprite(x, y, "player", frame);
         }
       }
-    }
+    };
   }
 
   /**
@@ -105,10 +113,15 @@ class GameScene extends Phaser.Scene {
     // Create the TileMap and the Layer
     const tileMap = this.add.tilemap("map", 16, 16);
     tileMap.addTilesetImage("tiles");
-    const layer = tileMap.createDynamicLayer("layer", "tiles", 0, 0);
+    const layer = tileMap.createLayer("layer", "tiles", 0, 0);
     tileMap.setCollisionBetween(54, 83);
-    if (DEBUG) {
-      layer.renderDebug(this.add.graphics(), {});
+
+    if (layer) {
+      if (DEBUG) {
+        layer.renderDebug(this.add.graphics(), {});
+      }
+    } else {
+      console.error("Layer is null. Unable to render debug.");
     }
 
     // Player animations
@@ -116,40 +129,57 @@ class GameScene extends Phaser.Scene {
       key: "left",
       frames: this.anims.generateFrameNumbers("player", { start: 8, end: 9 }),
       frameRate: 10,
-      repeat: -1
+      repeat: -1,
     });
     this.anims.create({
       key: "right",
       frames: this.anims.generateFrameNumbers("player", { start: 1, end: 2 }),
       frameRate: 10,
-      repeat: -1
+      repeat: -1,
     });
     this.anims.create({
       key: "up",
       frames: this.anims.generateFrameNumbers("player", { start: 11, end: 13 }),
       frameRate: 10,
-      repeat: -1
+      repeat: -1,
     });
     this.anims.create({
       key: "down",
       frames: this.anims.generateFrameNumbers("player", { start: 4, end: 6 }),
       frameRate: 10,
-      repeat: -1
+      repeat: -1,
     });
 
     // Player game object
     this.players[this.id] = this.physics.add.sprite(48, 48, "player", 1);
-    this.physics.add.collider(this.players[this.id], layer);
+    if (layer) {
+      this.physics.add.collider(this.players[this.id], layer);
+    }
     this.cameras.main.startFollow(this.players[this.id]);
     this.cameras.main.setBounds(
-      0, 0, tileMap.widthInPixels, tileMap.heightInPixels
+      0,
+      0,
+      tileMap.widthInPixels,
+      tileMap.heightInPixels
     );
 
     // Keyboard input bindings
-    this.leftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
-    this.rightKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
-    this.upKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
-    this.downKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
+    if (this.input.keyboard) {
+      this.leftKey = this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.LEFT
+      );
+      this.rightKey = this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.RIGHT
+      );
+      this.upKey = this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.UP
+      );
+      this.downKey = this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.DOWN
+      );
+    } else {
+      console.error("Keyboard is null. Unable to add key events.");
+    }
   }
 
   public update() {
@@ -164,7 +194,9 @@ class GameScene extends Phaser.Scene {
 
       let moving = false;
       if (this.leftKey && this.leftKey.isDown) {
-        (player.body as Phaser.Physics.Arcade.Body).setVelocityX(-this.VELOCITY);
+        (player.body as Phaser.Physics.Arcade.Body).setVelocityX(
+          -this.VELOCITY
+        );
         player.play("left", true);
         moving = true;
       } else if (this.rightKey && this.rightKey.isDown) {
@@ -175,7 +207,9 @@ class GameScene extends Phaser.Scene {
         (player.body as Phaser.Physics.Arcade.Body).setVelocityX(0);
       }
       if (this.upKey && this.upKey.isDown) {
-        (player.body as Phaser.Physics.Arcade.Body).setVelocityY(-this.VELOCITY);
+        (player.body as Phaser.Physics.Arcade.Body).setVelocityY(
+          -this.VELOCITY
+        );
         player.play("up", true);
         moving = true;
       } else if (this.downKey && this.downKey.isDown) {
@@ -189,21 +223,22 @@ class GameScene extends Phaser.Scene {
         (player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
         player.anims.stop();
       } else if (this.wsClient) {
-        this.wsClient.send(JSON.stringify({
-          id: this.id,
-          x: player.x,
-          y: player.y,
-          frame: player.frame.name
-        }));
+        this.wsClient.send(
+          JSON.stringify({
+            id: this.id,
+            x: player.x,
+            y: player.y,
+            frame: player.frame.name,
+          })
+        );
       }
       player.update();
     }
   }
 }
 
-
 // Phaser configuration variables
-const config: GameConfig = {
+const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: 800,
   height: 500,
@@ -211,13 +246,13 @@ const config: GameConfig = {
   input: { keyboard: true },
   physics: {
     default: "arcade",
-    arcade: { debug: DEBUG }
+    arcade: { debug: DEBUG },
   },
-  render: { pixelArt: true, antialias: false }
-}
+  render: { pixelArt: true, antialias: false },
+};
 
 class LabDemoGame extends Phaser.Game {
-  constructor(config: GameConfig) {
+  constructor(config: Phaser.Types.Core.GameConfig) {
     super(config);
   }
 }
